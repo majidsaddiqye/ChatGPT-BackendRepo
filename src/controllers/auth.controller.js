@@ -47,6 +47,39 @@ async function registerUser(req, res) {
   }
 }
 
+// LoginUser Controller
+async function LoginUser(req, res) {
+  const { email, password } = req.body;
 
+  if (!email || !password) {
+      return res.status(400).send({ message: "All fields are required" });
+    }
 
-module.exports = { registerUser };
+  const user = await userModel.findOne({ email });
+  if (!user) {
+    return res.status(401).send({ message: "Invalid email or password" });
+  }
+
+  const isPasswordValid = await bcrypt.compare(password, user.password);
+
+  if (!isPasswordValid) {
+    return res.status(401).send({ message: "Invalid password" });
+  }
+
+  const token = JWT.sign({ id: user._id }, process.env.JWT_SECRET, {
+    expiresIn: "7d",
+  });
+
+  res.cookie("token", token);
+
+  return res.status(201).send({
+    message: "Login successfully",
+    user: {
+      email: user.email,
+      id: user._id,
+      fullName: user.fullName,
+    },
+  });
+}
+
+module.exports = { registerUser, LoginUser };
