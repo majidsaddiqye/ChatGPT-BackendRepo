@@ -42,11 +42,13 @@ function initSocketServer(httpServer) {
         role: "user",
       });
 
-      //ChatHistory Read
-      const chatHistory = await messageModel.find({
-        chat: messagePayload.chat,
-      });
+      //Improve chat history handling and optimize short-term memory
 
+      const chatHistory = (await messageModel.find({
+        chat: messagePayload.chat,
+      }).sort({createdAt:-1}).limit(4).lean()).reverse();
+
+      // Formated chatHistory of GenAi Docs
       const formattedHistory = chatHistory.map((item) => ({
         role: item.role,
         parts: [{ text: item.content }],
