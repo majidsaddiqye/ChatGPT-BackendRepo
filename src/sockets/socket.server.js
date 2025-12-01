@@ -9,6 +9,7 @@ function initSocketServer(httpServer) {
   const io = new Server(httpServer, {});
 
   //Socket Middleware
+
   io.use(async (socket, next) => {
     //Add Cookie Token in Headers
     const cookies = cookie.parse(socket.handshake.headers?.cookie || "");
@@ -29,8 +30,10 @@ function initSocketServer(httpServer) {
   });
 
   // Connect to the server and AI Integration
+
   io.on("connection", (socket) => {
     socket.on("ai-message", async (messagePayload) => {
+      
       //Save User message in Database
       await messageModel.create({
         chat: messagePayload.chat,
