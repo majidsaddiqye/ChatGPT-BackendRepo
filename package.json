@@ -21,6 +21,7 @@
   "homepage": "https://github.com/majidsaddiqye/ChatGPT-BackendRepo#readme",
   "dependencies": {
     "@google/genai": "^1.30.0",
+    "@pinecone-database/pinecone": "^6.1.3",
     "bcrypt": "^6.0.0",
     "cookie": "^1.1.1",
     "cookie-parser": "^1.4.7",

@@ -2,8 +2,9 @@ const { Server } = require("socket.io");
 const cookie = require("cookie");
 const JWT = require("jsonwebtoken");
 const userModel = require("../models/user.model");
-const generateResponse = require("../services/ai.service");
+const { generateResponse, generateVector } = require("../services/ai.service");
 const messageModel = require("../models/message.model");
+const { createMemory, querMemory } = require("../services/vector.service");
 
 function initSocketServer(httpServer) {
   const io = new Server(httpServer, {});
@@ -33,20 +34,36 @@ function initSocketServer(httpServer) {
 
   io.on("connection", (socket) => {
     socket.on("ai-message", async (messagePayload) => {
-      
       //Save User message in Database
-      await messageModel.create({
+      const message = await messageModel.create({
         chat: messagePayload.chat,
         user: socket.user._id,
         content: messagePayload.content,
         role: "user",
       });
 
+      //Convert input into vector and saved into Pineconn
+      const vectors = await generateVector(messagePayload.content);
+      await createMemory({
+        vector: vectors,
+        messageId: message._id,
+        metadata: {
+          chat: messagePayload.chat,
+          user: socket.user._id,
+        },
+      });
+
       //Improve chat history handling and optimize short-term memory
 
-      const chatHistory = (await messageModel.find({
-        chat: messagePayload.chat,
-      }).sort({createdAt:-1}).limit(20).lean()).reverse();
+      const chatHistory = (
+        await messageModel
+          .find({
+            chat: messagePayload.chat,
+          })
+          .sort({ createdAt: -1 })
+          .limit(20)
+          .lean()
+      ).reverse();
 
       // Formated chatHistory of GenAi Docs
       const formattedHistory = chatHistory.map((item) => ({
@@ -57,11 +74,22 @@ function initSocketServer(httpServer) {
       const response = await generateResponse(formattedHistory);
 
       //Save AI message in Database
-      await messageModel.create({
+      const responseMessage = await messageModel.create({
         chat: messagePayload.chat,
         user: socket.user._id,
         content: response,
         role: "model",
+      });
+
+      //Convert Output into vector and saved into Pineconn
+      const responeVectors = await generateVector(response);
+      await createMemory({
+        vector: responeVectors,
+        messageId: responseMessage._id,
+        metadata: {
+          chat: messagePayload.chat,
+          user: socket.user._id,
+        },
       });
 
       //AI Response Code
